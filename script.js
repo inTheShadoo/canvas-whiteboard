@@ -51,6 +51,24 @@ canvas.addEventListener('mousemove', (e) => {
         });
 })
 
+// key stuff
+document.addEventListener('keydown', (e) => {
+    if (e.altKey) {
+        e.preventDefault();
+        currentShape.alt = true
+    }
+    if (e.shiftKey) {
+        e.preventDefault();
+        currentShape.shift = true
+    }
+})
+document.addEventListener('keyup', (e) => {
+    if (e.key === 'Alt')
+        currentShape.alt = false
+    if (e.key === 'Shift')
+        currentShape.shift = false
+})
+
 //on mouse up (stop and save)
 canvas.addEventListener('mouseup', (e) => {
     isDrawing = false;
@@ -69,7 +87,6 @@ function update() {
 
 }
 
-
 function drawFree(drawing) {
     ctx.lineWidth = 5
     ctx.strokeStyle = 'black';
@@ -84,16 +101,7 @@ function drawFree(drawing) {
 }
 
 // function drawCircle(drawing) {
-//     ctx.lineWidth = 5
-//     ctx.strokeStyle = 'black';
-//     ctx.beginPath();
-//     ctx.lineJoin = 'round'
-//     ctx.lineCap = 'round'
-//     ctx.moveTo(drawing.x, drawing.y);
-//     for (let j = 0; j < drawing.length; j++) {
-//         ctx.arcTo(drawing[j].x, drawing[j].y)
-//         ctx.stroke();
-//     }
+
 // }
 
 function drawRectangle(drawing) {
@@ -105,7 +113,22 @@ function drawRectangle(drawing) {
     ctx.moveTo(drawing.drawing.x, drawing.drawing.y);
     let width = drawing.drawing[drawing.drawing.length - 1].x - drawing.drawing[0].x
     let height = drawing.drawing[drawing.drawing.length - 1].y - drawing.drawing[0].y
-    ctx.rect(drawing.drawing[0].x, drawing.drawing[0].y, width, height)
+    let x = drawing.drawing[0].x;
+    let y = drawing.drawing[0].y;
+
+    if (drawing.shift) {
+        const size = width > height ? width : height;
+        width = Math.abs(size) * Math.sign(width);
+        height = Math.abs(size) * Math.sign(height);
+    }
+    if (drawing.alt) {
+        x -= width;
+        y -= height;
+        width *= 2;
+        height *= 2;
+    }
+
+    ctx.rect(x, y, width, height);
     ctx.stroke();
 }
 
