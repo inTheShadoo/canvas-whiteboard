@@ -18,12 +18,14 @@ body {
     gap: 1rem;
     background-color: white;
 }
+
 .side-bar {
     flex-direction: column;
     left: 1rem;
     top: 50%;
     transform: translateY(-50%)
 }
+
 .top-bar {
     top: 1rem;
     left: 50%;
@@ -39,5 +41,9 @@ body {
 }
 
 .btn:hover {
+    background-color: rgba(220, 220, 220, 0.432);
+}
+
+.selected {
     background-color: rgba(220, 220, 220, 0.336);
 }

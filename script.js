@@ -19,12 +19,16 @@ let isDrawing = false;
 
 // handle brush type btn clicks
 brushBtns.forEach(btn => btn.addEventListener('click', (e) => {
+    brushBtns.forEach(button => button.classList.remove('selected'));
     brushType = btn.dataset.type // line, circle, square
+    btn.classList.add('selected')
 }))
 
 // on mouse down (start drawing)
 canvas.addEventListener('mousedown', (e) => {
     isDrawing = true;
+    if (brushType === 'hand')
+        canvas.style.cursor = 'move'
     currentShape.shape = brushType;
     currentShape.drawing.push({
         x: e.clientX,
@@ -36,7 +40,7 @@ canvas.addEventListener('mousedown', (e) => {
 canvas.addEventListener('mousemove', (e) => {
     if (!isDrawing) return;
 
-    if (currentShape.shape === 'rectangle') {
+    if (currentShape.shape !== 'pen') {
         currentShape.drawing = [
             currentShape.drawing[0],
             {
@@ -72,16 +76,13 @@ document.addEventListener('keyup', (e) => {
 //on mouse up (stop and save)
 canvas.addEventListener('mouseup', (e) => {
     isDrawing = false;
+    canvas.style.cursor = 'default'
 
     // push drawing
-    drawings.push({ ...currentShape })
+    if (brushType !== 'hand')
+        drawings.push({ ...currentShape })
     currentShape.drawing = [];
 })
-
-
-function moveCanvas() {
-
-}
 
 function update() {
 
@@ -100,9 +101,74 @@ function drawFree(drawing) {
     }
 }
 
-// function drawCircle(drawing) {
+function drawLine(drawing) {
+    ctx.lineWidth = 5
+    ctx.strokeStyle = 'black';
+    ctx.beginPath();
+    ctx.lineJoin = 'round'
+    ctx.lineCap = 'round'
+    ctx.moveTo(drawing.drawing[0].x, drawing.drawing[0].y);
+    let x = drawing.drawing[drawing.drawing.length - 1].x
+    let y = drawing.drawing[drawing.drawing.length - 1].y
+    if (drawing.shift) {
+        const dx = x - drawing.drawing[0].x
+        const dy = y - drawing.drawing[0].y
+        let hypot = Math.hypot(dy, dx)
+        let theta = (Math.atan2(dy, dx) * 180) / Math.PI
+        // find the nearsest rounded angle
+        let closestAngle = 0;
+        let closestDiff = 180;
+        const angles = [0, 45, 90, 135, 180];
+        angles.forEach(angle => {
+            let diff = Math.abs(theta) - angle;
 
-// }
+            if (Math.abs(diff) < closestDiff) {
+                closestAngle = angle * Math.sign(theta);
+                closestDiff = diff;
+            }
+        })
+        // rotate this vector to there
+        // a. v = v2 - v1 is your vector
+        // b. v.normalize() gives you the unit vector
+        // c. rotate the unit vector and multiply by the v.length()
+        // d. add this vector to v1 to get the point for lineTo
+        x = Math.cos(Math.PI * closestAngle / 180) * hypot;
+        y = Math.sin(Math.PI * closestAngle / 180) * hypot;
+        //
+        x += drawing.drawing[0].x
+        y += drawing.drawing[0].y
+        // simple maths bro
+    }
+    ctx.lineTo(x, y)
+    ctx.stroke()
+}
+
+function drawCircle(drawing) {
+    ctx.lineWidth = 5
+    ctx.strokeStyle = 'black';
+    ctx.beginPath();
+    ctx.lineJoin = 'round'
+    ctx.lineCap = 'round'
+
+    ctx.moveTo(drawing.drawing.x, drawing.drawing.y);
+    let width = drawing.drawing[drawing.drawing.length - 1].x - drawing.drawing[0].x
+    let height = drawing.drawing[drawing.drawing.length - 1].y - drawing.drawing[0].y
+    let x = drawing.drawing[0].x;
+    let y = drawing.drawing[0].y;
+    if (drawing.shift) {
+        const size = width > height ? width : height;
+        height = Math.abs(size) * Math.sign(height);
+        width = Math.abs(size) * Math.sign(width);
+    }
+    if (!drawing.alt) {
+        x += (width / 2)
+        y += (height / 2)
+        height = height / 2
+        width = width / 2
+    }
+    ctx.ellipse(x, y, Math.abs(width), Math.abs(height), 0, 0, 2 * Math.PI);
+    ctx.stroke();
+}
 
 function drawRectangle(drawing) {
     ctx.lineWidth = 5
@@ -135,7 +201,6 @@ function drawRectangle(drawing) {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     // ctx.fillRect(0, 0, canvas.width, canvas.height)
-
     // draw the saved drawings
     if (drawings.length) {
         for (let i = 0; i < drawings.length; i++) {
@@ -145,7 +210,7 @@ function draw() {
 
     // draw the current drawing
     if (currentShape.drawing.length) {
-        drawShape(currentShape)
+        drawShape(currentShape);
     }
 }
 
@@ -160,6 +225,10 @@ const drawShape = (drawing) => {
         case 'circle':
             drawCircle(drawing);
             break;
+        case 'line':
+            drawLine(drawing);
+            break;
+
     }
 }
 
