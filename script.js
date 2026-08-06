@@ -1,5 +1,6 @@
 const canvas = document.getElementById('canvas');
 const brushBtns = document.querySelectorAll('.btn');
+const colorBtns = document.querySelectorAll('.color');
 const ctx = canvas.getContext('2d');
 
 // ----------------------CONSTANTS ------------------
@@ -8,13 +9,16 @@ canvas.height = window.innerHeight
 
 // ----------------------STATE ------------------   
 let drawings = [];
+let translate = {};
 let currentShape = {
     drawing: [],
 }
 
-let color = 'black'
+// let color = 'black'
 let brushType = 'pen'
 let isDrawing = false;
+
+let scale = 1
 
 
 // handle brush type btn clicks
@@ -27,33 +31,84 @@ brushBtns.forEach(btn => btn.addEventListener('click', (e) => {
 // on mouse down (start drawing)
 canvas.addEventListener('mousedown', (e) => {
     isDrawing = true;
+
+    translate.startingX = e.clientX / scale
+    translate.startingY = e.clientY /scale 
+
     if (brushType === 'hand')
         canvas.style.cursor = 'move'
-    currentShape.shape = brushType;
-    currentShape.drawing.push({
-        x: e.clientX,
-        y: e.clientY
-    });
+    else {
+        currentShape.shape = brushType;
+        currentShape.drawing.push({
+            x: e.clientX / scale,
+            y: e.clientY /scale 
+        });
+    }
 })
 
 //on mouse move
 canvas.addEventListener('mousemove', (e) => {
     if (!isDrawing) return;
 
-    if (currentShape.shape !== 'pen') {
+    if (brushType === 'hand') {
+        translate.finalX = e.clientX / scale
+        translate.finalY = e.clientY /scale 
+    }
+    else if (currentShape.shape !== 'pen') {
         currentShape.drawing = [
             currentShape.drawing[0],
             {
-                x: e.clientX,
-                y: e.clientY
+                x: e.clientX / scale,
+                y: e.clientY /scale 
             }
         ]
     } else
         currentShape.drawing.push({
-            x: e.clientX,
-            y: e.clientY
+            x: e.clientX / scale,
+            y: e.clientY /scale 
         });
 })
+
+//on mouse up (stop and save)
+canvas.addEventListener('mouseup', (e) => {
+    isDrawing = false;
+    canvas.style.cursor = 'default'
+
+    if (brushType === 'hand') {
+        drawings.forEach(drawing => drawing.drawing.forEach(point => {
+            // console.log(point)
+            point.x += translate.finalX - translate.startingX
+            point.y += translate.finalY - translate.startingY
+        }));
+
+        translate = {};
+    }
+
+    // push drawing
+    if (brushType !== 'hand') {
+        drawings.push({ ...currentShape })
+        currentShape.drawing = [];
+    }
+})
+
+//color change
+colorBtns.forEach(btn => btn.addEventListener('click', (e) => {
+    currentShape.color = btn.dataset.color;
+}));
+
+//zoom
+document.addEventListener('wheel', (e) => {
+    console.log(e)
+    //positive out/ negative in
+    if (e.deltaY > 0) {
+        scale -= 0.05
+    } else {
+        scale += 0.05
+    }
+
+    scale = Math.max(0.2, Math.min(scale, 5));
+}, { passive: false });
+
 
 // key stuff
 document.addEventListener('keydown', (e) => {
@@ -73,16 +128,6 @@ document.addEventListener('keyup', (e) => {
         currentShape.shift = false
 })
 
-//on mouse up (stop and save)
-canvas.addEventListener('mouseup', (e) => {
-    isDrawing = false;
-    canvas.style.cursor = 'default'
-
-    // push drawing
-    if (brushType !== 'hand')
-        drawings.push({ ...currentShape })
-    currentShape.drawing = [];
-})
 
 function update() {
 
@@ -90,7 +135,7 @@ function update() {
 
 function drawFree(drawing) {
     ctx.lineWidth = 5
-    ctx.strokeStyle = 'black';
+    ctx.strokeStyle = drawing.color ?? 'black';
     ctx.beginPath();
     ctx.lineJoin = 'round'
     ctx.lineCap = 'round'
@@ -103,7 +148,6 @@ function drawFree(drawing) {
 
 function drawLine(drawing) {
     ctx.lineWidth = 5
-    ctx.strokeStyle = 'black';
     ctx.beginPath();
     ctx.lineJoin = 'round'
     ctx.lineCap = 'round'
@@ -140,12 +184,13 @@ function drawLine(drawing) {
         // simple maths bro
     }
     ctx.lineTo(x, y)
+    ctx.strokeStyle = drawing.color ?? 'black';
     ctx.stroke()
 }
 
 function drawCircle(drawing) {
     ctx.lineWidth = 5
-    ctx.strokeStyle = 'black';
+    ctx.strokeStyle = drawing.color ?? 'black';
     ctx.beginPath();
     ctx.lineJoin = 'round'
     ctx.lineCap = 'round'
@@ -172,7 +217,7 @@ function drawCircle(drawing) {
 
 function drawRectangle(drawing) {
     ctx.lineWidth = 5
-    ctx.strokeStyle = 'black';
+    ctx.strokeStyle = drawing.color ?? 'black';
     ctx.beginPath();
     ctx.lineJoin = 'round'
     ctx.lineCap = 'round'
@@ -200,7 +245,17 @@ function drawRectangle(drawing) {
 
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height)
+    // ctx.fillStyle = 'white'
     // ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.save();
+    if (brushType === 'hand')
+        ctx.translate(translate.finalX - translate.startingX, translate.finalY - translate.startingY)
+
+
+    ctx.translate(canvas.width / 2, canvas.height / 2)
+    ctx.scale(scale, scale)
+    ctx.translate(-canvas.width / 2, -canvas.height / 2);
+
     // draw the saved drawings
     if (drawings.length) {
         for (let i = 0; i < drawings.length; i++) {
@@ -212,6 +267,7 @@ function draw() {
     if (currentShape.drawing.length) {
         drawShape(currentShape);
     }
+    ctx.restore();
 }
 
 const drawShape = (drawing) => {
